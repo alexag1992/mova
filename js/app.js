@@ -28,7 +28,7 @@ function showLoadingScreen() {
 
     // Промис: ждём определения auth-состояния (или timeout 2s)
     const authReady = new Promise(resolve => {
-        const timeout = setTimeout(resolve, 2000);
+        const timeout = setTimeout(() => { firstAuthHandled = true; resolve(); }, 2000);
 
         if (!window.Auth) { resolve(); return; }
 
