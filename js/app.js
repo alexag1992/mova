@@ -49,13 +49,15 @@ function showLoadingScreen() {
                 resolve();
             } else {
                 // Последующие изменения (вход / выход после загрузки)
+                // Перерисовываем немедленно — чтобы показать авторизованного пользователя
+                handleRoute();
+                // Синхронизацию грузим в фоне, потом перерисовываем ещё раз
                 if (user) {
-                    const loaded = await Sync.load(user.uid).catch(() => false);
-                    if (!loaded) await Sync.save(user.uid).catch(() => {});
+                    Sync.load(user.uid)
+                        .then(loaded => { if (loaded) handleRoute(); })
+                        .catch(() => {});
                     Sync.saveProfile(user).catch(() => {});
                 }
-                // Перерисовываем текущую страницу с новыми данными
-                handleRoute();
             }
         });
     });
