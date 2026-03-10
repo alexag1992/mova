@@ -5,22 +5,11 @@
 // ---------- Инициализация при загрузке ----------
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Обновляем streak при каждом входе
     updateStreak();
-
-    // Глобальные обработчики ошибок
     initErrorHandlers();
-
-    // Online/offline уведомления
     initNetworkHandlers();
-
-    // Захватываем промпт установки PWA
     initInstallPrompt();
-
-    // Прячем нав при скролле вниз
     initScrollNav();
-
-    // Показываем loading screen, потом запускаем роутер
     showLoadingScreen();
 });
 
@@ -28,11 +17,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function showLoadingScreen() {
     const loading = document.getElementById('loading');
-    const app = document.getElementById('app');
-
+    const app     = document.getElementById('app');
     app.style.opacity = '0';
 
-    setTimeout(() => {
+    // Инициализируем Firestore
+    if (window.Sync) Sync.init();
+
+    // Флаг: был ли уже обработан первый auth-event
+    let firstAuthHandled = false;
+
+    // Промис: ждём определения auth-состояния (или timeout 2s)
+    const authReady = new Promise(resolve => {
+        const timeout = setTimeout(resolve, 2000);
+
+        if (!window.Auth) { resolve(); return; }
+
+        Auth.onStateChanged(async user => {
+            if (!firstAuthHandled) {
+                // Первый вызов — при загрузке страницы
+                firstAuthHandled = true;
+                clearTimeout(timeout);
+
+                if (user) {
+                    const loaded = await Sync.load(user.uid).catch(() => false);
+                    if (!loaded) {
+                        // Первый вход — заливаем локальные данные в облако
+                        await Sync.save(user.uid).catch(() => {});
+                    }
+                    Sync.saveProfile(user).catch(() => {});
+                }
+                resolve();
+            } else {
+                // Последующие изменения (вход / выход после загрузки)
+                if (user) {
+                    const loaded = await Sync.load(user.uid).catch(() => false);
+                    if (!loaded) await Sync.save(user.uid).catch(() => {});
+                    Sync.saveProfile(user).catch(() => {});
+                }
+                // Перерисовываем текущую страницу с новыми данными
+                handleRoute();
+            }
+        });
+    });
+
+    // Минимум 1 секунда экрана загрузки + ждём auth
+    Promise.all([authReady, new Promise(r => setTimeout(r, 1000))]).then(() => {
         loading.style.opacity = '0';
         loading.style.transition = 'opacity 0.4s ease';
 
@@ -42,7 +71,7 @@ function showLoadingScreen() {
             app.style.transition = 'opacity 0.3s ease';
             initRouter();
         }, 400);
-    }, 1000);
+    });
 }
 
 // ---------- Роутер ----------
@@ -58,7 +87,6 @@ function handleRoute() {
     updateBottomNav(hash);
 }
 
-// Навигация программно
 function navigate(href) {
     location.hash = href;
 }
@@ -69,7 +97,6 @@ function renderPage(hash) {
     const app = document.getElementById('app');
 
     let html = '';
-
     if (hash === '#/' || hash === '') {
         html = renderHome();
     } else if (hash === '#/alphabet') {
@@ -79,8 +106,7 @@ function renderPage(hash) {
     } else if (hash === '#/review') {
         html = renderReview();
     } else if (hash.startsWith('#/phrasebook/')) {
-        const catId = hash.replace('#/phrasebook/', '');
-        html = renderPhrasebookCategory(catId);
+        html = renderPhrasebookCategory(hash.replace('#/phrasebook/', ''));
     } else if (hash === '#/phrasebook') {
         html = renderPhrasebook();
     } else if (hash === '#/dictionary') {
@@ -88,16 +114,13 @@ function renderPage(hash) {
     } else if (hash === '#/progress') {
         html = renderProgress();
     } else if (hash.startsWith('#/lesson/')) {
-        const id = hash.replace('#/lesson/', '');
-        html = renderLesson(id);
+        html = renderLesson(hash.replace('#/lesson/', ''));
     } else if (hash.startsWith('#/test/')) {
-        const id = hash.replace('#/test/', '');
-        html = renderTest(id);
+        html = renderTest(hash.replace('#/test/', ''));
     } else {
         html = render404();
     }
 
-    // Плавный переход: скрываем → рендерим → показываем
     app.style.opacity = '0';
     setTimeout(() => {
         app.innerHTML = html;
@@ -126,13 +149,12 @@ function render404() {
 // ---------- Bottom navigation ----------
 
 function updateBottomNav(hash) {
-    const navItems = document.querySelectorAll('.bottom-nav-item');
-    navItems.forEach(item => {
+    document.querySelectorAll('.bottom-nav-item').forEach(item => {
         item.classList.remove('active');
-        const itemHash = item.dataset.hash;
-        if (hash === itemHash || (itemHash !== '#/' && hash.startsWith(itemHash))) {
+        const ih = item.dataset.hash;
+        if (hash === ih || (ih !== '#/' && hash.startsWith(ih))) {
             item.classList.add('active');
-        } else if (itemHash === '#/' && (hash === '#/' || hash === '' || hash === '#')) {
+        } else if (ih === '#/' && (hash === '#/' || hash === '' || hash === '#')) {
             item.classList.add('active');
         }
     });
@@ -143,20 +165,14 @@ function updateBottomNav(hash) {
 function initScrollNav() {
     const nav = document.getElementById('bottom-nav');
     if (!nav) return;
-
-    let lastScrollY = 0;
-    let ticking = false;
-
+    let lastY = 0, ticking = false;
     window.addEventListener('scroll', () => {
         if (!ticking) {
             window.requestAnimationFrame(() => {
-                const currentY = window.scrollY;
-                if (currentY > lastScrollY + 10 && currentY > 80) {
-                    nav.classList.add('nav-hidden');
-                } else if (currentY < lastScrollY - 10) {
-                    nav.classList.remove('nav-hidden');
-                }
-                lastScrollY = currentY;
+                const y = window.scrollY;
+                if (y > lastY + 10 && y > 80) nav.classList.add('nav-hidden');
+                else if (y < lastY - 10) nav.classList.remove('nav-hidden');
+                lastY = y;
                 ticking = false;
             });
             ticking = true;
@@ -167,25 +183,15 @@ function initScrollNav() {
 // ---------- Глобальные обработчики ошибок ----------
 
 function initErrorHandlers() {
-    window.addEventListener('error', event => {
-        console.error('JS Error:', event.message, event.filename, event.lineno);
-    });
-
-    window.addEventListener('unhandledrejection', event => {
-        console.error('Unhandled Promise rejection:', event.reason);
-        event.preventDefault();
-    });
+    window.addEventListener('error', e => console.error('JS Error:', e.message, e.filename, e.lineno));
+    window.addEventListener('unhandledrejection', e => { console.error('Unhandled rejection:', e.reason); e.preventDefault(); });
 }
 
 // ---------- Online / Offline ----------
 
 function initNetworkHandlers() {
-    window.addEventListener('online', () => {
-        if (window.Notifications) Notifications.success('🌐 Злучэнне адноўлена');
-    });
-    window.addEventListener('offline', () => {
-        if (window.Notifications) Notifications.show('📵 Няма злучэння з інтэрнэтам', 'error', 4000);
-    });
+    window.addEventListener('online',  () => { if (window.Notifications) Notifications.success('🌐 Злучэнне адноўлена'); });
+    window.addEventListener('offline', () => { if (window.Notifications) Notifications.show('📵 Няма злучэння', 'error', 4000); });
 }
 
 // ---------- PWA Install Prompt ----------
@@ -193,32 +199,27 @@ function initNetworkHandlers() {
 let _deferredInstallPrompt = null;
 
 function initInstallPrompt() {
-    window.addEventListener('beforeinstallprompt', event => {
-        event.preventDefault();
-        _deferredInstallPrompt = event;
+    window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault();
+        _deferredInstallPrompt = e;
         showInstallPrompt();
     });
-
     window.addEventListener('appinstalled', () => {
         _deferredInstallPrompt = null;
-        const container = document.getElementById('install-prompt-container');
-        if (container) container.innerHTML = '';
+        const c = document.getElementById('install-prompt-container');
+        if (c) c.innerHTML = '';
         if (window.Notifications) Notifications.success('🎉 МОВА ўстаноўлена!');
     });
 }
 
 function showInstallPrompt() {
-    const container = document.getElementById('install-prompt-container');
-    if (!container || !_deferredInstallPrompt) return;
-
-    container.innerHTML = `
+    const c = document.getElementById('install-prompt-container');
+    if (!c || !_deferredInstallPrompt) return;
+    c.innerHTML = `
 <div class="install-prompt" id="install-prompt">
     <div class="install-prompt-body">
         <span class="install-prompt-icon">📱</span>
-        <div>
-            <strong>Усталяваць МОВА</strong>
-            <span>Працуйце офлайн, без браўзера</span>
-        </div>
+        <div><strong>Усталяваць МОВА</strong><span>Працуйце офлайн, без браўзера</span></div>
     </div>
     <div class="install-prompt-actions">
         <button class="btn-install" onclick="triggerInstall()">Усталяваць</button>
@@ -230,32 +231,22 @@ function showInstallPrompt() {
 async function triggerInstall() {
     if (!_deferredInstallPrompt) return;
     _deferredInstallPrompt.prompt();
-    const { outcome } = await _deferredInstallPrompt.userChoice;
-    if (outcome === 'accepted') {
-        _deferredInstallPrompt = null;
-    }
+    await _deferredInstallPrompt.userChoice;
+    _deferredInstallPrompt = null;
     dismissInstall();
 }
 
 function dismissInstall() {
-    const prompt = document.getElementById('install-prompt');
-    if (prompt) {
-        prompt.style.animation = 'slideDown 0.3s ease reverse forwards';
-        setTimeout(() => prompt.remove(), 300);
-    }
+    const p = document.getElementById('install-prompt');
+    if (p) { p.style.animation = 'slideDown 0.3s ease reverse forwards'; setTimeout(() => p.remove(), 300); }
 }
 
 // ---------- Безопасный fetch ----------
 
 async function safeFetch(url) {
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.json();
-    } catch (err) {
-        console.warn('safeFetch failed:', url, err);
-        throw err;
-    }
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
 }
 
 // filterDictionary is handled by dictSearch() in pages.js

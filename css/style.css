@@ -2169,3 +2169,117 @@ input {
 .btn-install-dismiss:hover {
     color: var(--text-primary);
 }
+
+/* ============================================================
+   User Bar (Firebase Auth)
+   ============================================================ */
+
+.user-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 4px;
+}
+
+/* Авторизованный пользователь */
+.user-bar-auth {
+    border-color: rgba(0, 212, 255, 0.2);
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid var(--accent-blue);
+}
+
+.user-avatar-letter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-blue);
+    color: #000;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.user-bar-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.user-bar-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sync-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+    cursor: default;
+    display: inline-block;
+}
+
+.btn-signout {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 5px 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-signout:hover {
+    color: var(--accent-red);
+    border-color: var(--accent-red);
+}
+
+/* Анонимный пользователь */
+.user-bar-anon {
+    border-color: rgba(245, 158, 11, 0.2);
+    background: rgba(245, 158, 11, 0.04);
+}
+
+.user-bar-anon-text {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Кнопка "Войти через Google" */
+.btn-signin {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    color: #3c4043;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
+    transition: box-shadow 0.2s ease;
+    font-family: inherit;
+}
+
+.btn-signin:hover {
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}

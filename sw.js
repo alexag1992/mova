@@ -2,7 +2,7 @@
 // sw.js — Service Worker. Стратегия: Cache First → Network
 // ============================================================
 
-const CACHE_NAME = 'mova-v9';
+const CACHE_NAME = 'mova-v10';
 const AUDIO_CACHE = 'mova-audio-v1';
 
 // Файлы для кэширования при установке (статика)
@@ -18,6 +18,8 @@ const STATIC_ASSETS = [
     '/mova/js/dictionary.js',
     '/mova/js/repetition.js',
     '/mova/js/notifications.js',
+    '/mova/js/auth.js',
+    '/mova/js/sync.js',
     '/mova/manifest.json',
     '/mova/favicon.svg',
     '/mova/data/alphabet.json',

@@ -9,6 +9,11 @@ const KEYS = {
     words:    'mova_words',    // [{word, translation, lessonId}, ...]
 };
 
+// Триггер синхронизации с Firestore (если пользователь авторизован)
+function _triggerSync() {
+    if (window.Sync && window.Auth && Auth.getCurrentUser()) Sync.schedule();
+}
+
 // ---------- Прогресс уроков ----------
 
 function getProgress() {
@@ -21,6 +26,7 @@ function getProgress() {
 
 function saveProgress(data) {
     localStorage.setItem(KEYS.progress, JSON.stringify(data));
+    _triggerSync();
 }
 
 function getLessonProgress(lessonId) {
@@ -31,7 +37,7 @@ function getLessonProgress(lessonId) {
 function setLessonProgress(lessonId, stars) {
     const p = getProgress();
     p[lessonId] = { stars, completed: stars > 0 };
-    saveProgress(p);
+    saveProgress(p); // уже вызывает _triggerSync
 }
 
 function getCompletedLessonsCount() {
@@ -50,26 +56,16 @@ function getStreak() {
 }
 
 function updateStreak() {
-    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const today = new Date().toISOString().slice(0, 10);
     const streak = getStreak();
 
-    if (streak.lastDate === today) {
-        // Уже заходили сегодня — ничего не меняем
-        return streak;
-    }
+    if (streak.lastDate === today) return streak;
 
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-
-    if (streak.lastDate === yesterday) {
-        // Заходили вчера — продолжаем streak
-        streak.count += 1;
-    } else {
-        // Пропустили день (или первый вход) — сбрасываем
-        streak.count = 1;
-    }
-
+    streak.count = streak.lastDate === yesterday ? streak.count + 1 : 1;
     streak.lastDate = today;
     localStorage.setItem(KEYS.streak, JSON.stringify(streak));
+    _triggerSync();
     return streak;
 }
 
@@ -82,6 +78,7 @@ function getPoints() {
 function addPoints(n) {
     const current = getPoints();
     localStorage.setItem(KEYS.points, current + n);
+    _triggerSync();
     return current + n;
 }
 
@@ -97,10 +94,10 @@ function getWords() {
 
 function addWord(word) {
     const words = getWords();
-    // Не добавляем дубликаты
     if (!words.find(w => w.word === word.word)) {
         words.push(word);
         localStorage.setItem(KEYS.words, JSON.stringify(words));
+        _triggerSync();
     }
     return words;
 }
@@ -120,32 +117,37 @@ function logActivity() {
     const log = getActivityLog();
     log[today] = (log[today] || 0) + 1;
     localStorage.setItem('mova_activity', JSON.stringify(log));
+    _triggerSync();
 }
 
 // ---------- Достижения ----------
 
 function checkAchievements() {
-    const progress  = getProgress();
-    const streak    = getStreak();
-    const words     = getWords();
-    const completed = getCompletedLessonsCount();
+    const streak     = getStreak();
+    const words      = getWords();
+    const completed  = getCompletedLessonsCount();
     const wordsCount = words.length;
 
     const checks = [
-        { key: 'first_step',    done: completed >= 1,    title: 'Першы крок',    emoji: '🏆' },
-        { key: 'ten_words',     done: wordsCount >= 10,  title: 'Дзесятка',      emoji: '📖' },
-        { key: 'halfway',       done: completed >= 12,   title: 'Палова шляху',  emoji: '🎯' },
-        { key: 'hundred_words', done: wordsCount >= 100, title: 'Сотня слоў',    emoji: '💯' },
-        { key: 'week_streak',   done: streak.count >= 7, title: 'Тыднёвы страйк',emoji: '🔥' },
-        { key: 'course_done',   done: completed >= 24,   title: 'Курс завершаны',emoji: '🎓' },
+        { key: 'first_step',    done: completed >= 1,    title: 'Першы крок',     emoji: '🏆' },
+        { key: 'ten_words',     done: wordsCount >= 10,  title: 'Дзесятка',       emoji: '📖' },
+        { key: 'halfway',       done: completed >= 12,   title: 'Палова шляху',   emoji: '🎯' },
+        { key: 'hundred_words', done: wordsCount >= 100, title: 'Сотня слоў',     emoji: '💯' },
+        { key: 'week_streak',   done: streak.count >= 7, title: 'Тыднёвы страйк', emoji: '🔥' },
+        { key: 'course_done',   done: completed >= 24,   title: 'Курс завершаны', emoji: '🎓' },
     ];
 
     const earned = JSON.parse(localStorage.getItem('mova_achievements') || '[]');
+    let newUnlocked = false;
     checks.forEach(c => {
         if (c.done && !earned.includes(c.key)) {
             earned.push(c.key);
+            newUnlocked = true;
             if (window.Notifications) Notifications.achievement(`${c.emoji} ${c.title}`);
         }
     });
-    localStorage.setItem('mova_achievements', JSON.stringify(earned));
+    if (newUnlocked) {
+        localStorage.setItem('mova_achievements', JSON.stringify(earned));
+        _triggerSync();
+    }
 }

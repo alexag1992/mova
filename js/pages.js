@@ -99,6 +99,33 @@ function renderStars(count) {
     return html;
 }
 
+// ---------- User bar (auth) ----------
+
+function renderUserBar() {
+    const user = window.Auth ? Auth.getCurrentUser() : null;
+    if (user) {
+        const avatar = user.photoURL
+            ? `<img src="${user.photoURL}" class="user-avatar" referrerpolicy="no-referrer" alt="">`
+            : `<div class="user-avatar user-avatar-letter">${(user.displayName || '?')[0].toUpperCase()}</div>`;
+        return `
+<div class="user-bar user-bar-auth">
+    ${avatar}
+    <div class="user-bar-info">
+        <span class="user-bar-name">${user.displayName || user.email}</span>
+        <span id="sync-icon" class="sync-icon" title="Захавана ў воблаку">☁️</span>
+    </div>
+    <button class="btn-signout" onclick="Auth.signOut()">Выйсці</button>
+</div>`;
+    }
+    return `
+<div class="user-bar user-bar-anon">
+    <span class="user-bar-anon-text">💾 Прагрэс толькі на гэтым прыладзе</span>
+    <button class="btn-signin" onclick="Auth.signInWithGoogle()">
+        <svg width="16" height="16" viewBox="0 0 18 18" style="vertical-align:middle;margin-right:6px"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 002.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 01-7.18-2.54H1.83v2.07A8 8 0 008.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 010-3.04V5.41H1.83a8 8 0 000 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 001.83 5.4L4.5 7.49a4.77 4.77 0 014.48-3.3z"/></svg>Увайсці праз Google
+    </button>
+</div>`;
+}
+
 // ---------- Главная страница ----------
 
 function renderHome() {
@@ -129,6 +156,8 @@ function renderHome() {
 
     return `
 <div class="page page-home">
+    ${renderUserBar()}
+
     <header class="home-header">
         <h1 class="logo">МОВА</h1>
         <p class="logo-sub">Самавучак беларускай мовы</p>
