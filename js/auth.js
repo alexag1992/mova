@@ -30,10 +30,20 @@ const Auth = {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         try {
-            await firebase.auth().signInWithRedirect(provider);
+            await firebase.auth().signInWithPopup(provider);
             return true;
         } catch (e) {
-            if (window.Notifications) Notifications.error('Памылка ўваходу: ' + e.message);
+            if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+                return false;
+            }
+            if (e.code === 'auth/popup-blocked') {
+                if (window.Notifications) Notifications.show(
+                    'Браузер заблокировал окно входа. Разрешите всплывающие окна для этого сайта в настройках браузера.',
+                    'error', 7000
+                );
+                return false;
+            }
+            if (window.Notifications) Notifications.error('Ошибка входа: ' + e.message);
             console.error('Sign-in error:', e);
             return false;
         }
@@ -42,17 +52,11 @@ const Auth = {
     async signOut() {
         try {
             await firebase.auth().signOut();
-            if (window.Notifications) Notifications.show('Вы выйшлі з акаўнта', 'info', 2000);
+            if (window.Notifications) Notifications.show('Вы вышли из аккаунта', 'info', 2000);
         } catch (e) {
             console.error('Sign-out error:', e);
         }
     }
 };
-
-// Обработка результата после редиректа от Google
-firebase.auth().getRedirectResult().catch(e => {
-    if (window.Notifications) Notifications.error('Памылка ўваходу: ' + e.message);
-    console.error('Redirect sign-in error:', e);
-});
 
 window.Auth = Auth;
