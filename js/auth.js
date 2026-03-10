@@ -30,13 +30,11 @@ const Auth = {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         try {
-            await firebase.auth().signInWithPopup(provider);
+            await firebase.auth().signInWithRedirect(provider);
             return true;
         } catch (e) {
-            if (e.code !== 'auth/popup-closed-by-user') {
-                if (window.Notifications) Notifications.error('Памылка ўваходу: ' + e.message);
-                console.error('Sign-in error:', e);
-            }
+            if (window.Notifications) Notifications.error('Памылка ўваходу: ' + e.message);
+            console.error('Sign-in error:', e);
             return false;
         }
     },
@@ -50,5 +48,11 @@ const Auth = {
         }
     }
 };
+
+// Обработка результата после редиректа от Google
+firebase.auth().getRedirectResult().catch(e => {
+    if (window.Notifications) Notifications.error('Памылка ўваходу: ' + e.message);
+    console.error('Redirect sign-in error:', e);
+});
 
 window.Auth = Auth;
