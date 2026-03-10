@@ -79,6 +79,7 @@ function showLoadingScreen() {
 function initRouter() {
     window.addEventListener('hashchange', handleRoute);
     handleRoute();
+    showOnboarding();
 }
 
 function handleRoute() {
@@ -250,3 +251,114 @@ async function safeFetch(url) {
 }
 
 // filterDictionary is handled by dictSearch() in pages.js
+
+// ---------- Онбординг ----------
+
+const ONBOARDING_SLIDES = [
+    {
+        icon: '🇧🇾',
+        title: 'Добро пожаловать!',
+        desc: 'МОВА — бесплатный самоучитель белорусского языка. Без рекламы, без подписок.',
+    },
+    {
+        icon: '📚',
+        title: '24 урока',
+        desc: 'От алфавита до уверенного разговора. Упражнения, аудио и словарь — всё в одном месте.',
+    },
+    {
+        icon: '🔄',
+        title: 'Умное повторение',
+        desc: 'Приложение запоминает, какие слова тебе даются сложнее, и предлагает их повторить в нужный момент.',
+    },
+    {
+        icon: '☁️',
+        title: 'Сохрани прогресс',
+        desc: 'Войди через Google — и твой прогресс сохранится на всех устройствах. Можно заниматься с телефона и компьютера.',
+        isLast: true,
+    },
+];
+
+let _onboardingStep = 0;
+
+function showOnboarding() {
+    if (localStorage.getItem('mova_onboarded')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'onboarding-overlay';
+    overlay.innerHTML = _buildOnboardingHTML();
+    document.body.appendChild(overlay);
+}
+
+function _buildOnboardingHTML() {
+    const slides = ONBOARDING_SLIDES.map((s, i) => `
+<div class="onboarding-slide${i === 0 ? ' active' : ''}" data-slide="${i}">
+    <div class="onboarding-icon">${s.icon}</div>
+    <h2 class="onboarding-title">${s.title}</h2>
+    <p class="onboarding-desc">${s.desc}</p>
+</div>`).join('');
+
+    const dots = ONBOARDING_SLIDES.map((_, i) =>
+        `<span class="onboarding-dot${i === 0 ? ' active' : ''}"></span>`
+    ).join('');
+
+    return `
+<button class="onboarding-skip" onclick="completeOnboarding()">Пропустить</button>
+<div class="onboarding-slides">${slides}</div>
+<div class="onboarding-bottom">
+    <div class="onboarding-dots">${dots}</div>
+    <div id="onboarding-next-wrap">
+        <button class="btn-onboarding-next" onclick="onboardingNext()">Далее →</button>
+    </div>
+</div>`;
+}
+
+function onboardingNext() {
+    const slides = document.querySelectorAll('.onboarding-slide');
+    const dots   = document.querySelectorAll('.onboarding-dot');
+    const total  = ONBOARDING_SLIDES.length;
+
+    if (_onboardingStep >= total - 1) {
+        completeOnboarding();
+        return;
+    }
+
+    slides[_onboardingStep].classList.remove('active');
+    slides[_onboardingStep].classList.add('exit');
+    dots[_onboardingStep].classList.remove('active');
+
+    _onboardingStep++;
+
+    slides[_onboardingStep].classList.add('active');
+    dots[_onboardingStep].classList.add('active');
+
+    // На последнем слайде: меняем кнопку и добавляем Google-кнопку
+    if (_onboardingStep === total - 1) {
+        const wrap = document.getElementById('onboarding-next-wrap');
+        const user = window.Auth ? Auth.getCurrentUser() : null;
+        const signinHTML = !user ? `
+<button class="btn-onboarding-signin" onclick="completeOnboardingAndSignIn()">
+    <svg width="16" height="16" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 002.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 01-7.18-2.54H1.83v2.07A8 8 0 008.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 010-3.04V5.41H1.83a8 8 0 000 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 001.83 5.4L4.5 7.49a4.77 4.77 0 014.48-3.3z"/></svg>
+    Войти через Google
+</button>` : '';
+        wrap.innerHTML = `<button class="btn-onboarding-next" onclick="completeOnboarding()">Начать обучение →</button>${signinHTML}`;
+        wrap.style.display = 'flex';
+        wrap.style.flexDirection = 'column';
+        wrap.style.gap = '12px';
+        wrap.style.width = '100%';
+    }
+}
+
+function completeOnboarding() {
+    localStorage.setItem('mova_onboarded', '1');
+    const overlay = document.getElementById('onboarding-overlay');
+    if (!overlay) return;
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => overlay.remove(), 300);
+    _onboardingStep = 0;
+}
+
+function completeOnboardingAndSignIn() {
+    completeOnboarding();
+    if (window.Auth) Auth.signInWithGoogle();
+}
