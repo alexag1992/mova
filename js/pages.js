@@ -323,15 +323,23 @@ function renderFetchError() {
 }
 
 function buildAlphabetHTML(letters) {
-    const grid = letters.map(l => `
+    const grid = letters.map(l => {
+        const char = l.letter.split(' ')[0];
+        const audioSrc = `alphabet/${char.toLowerCase()}.mp3`;
+        const safeChar = char.replace(/"/g, '&quot;');
+        return `
 <div class="letter-card card ${l.note ? 'letter-has-note' : ''}" onclick="toggleLetterNote(this)">
-    <div class="letter-main">${l.letter.split(' ')[0]}</div>
+    <div class="letter-main">${char}</div>
     <div class="letter-name">${l.name}</div>
     <div class="letter-sound">${l.sound}</div>
     <div class="letter-example">${l.example}</div>
-    <button class="letter-audio" onclick="event.stopPropagation();showAudioStub()">🔊</button>
+    <button class="letter-audio audio-btn audio-btn-sm"
+            data-audio="${audioSrc}"
+            data-text="${safeChar}"
+            onclick="event.stopPropagation();playWordAudio(this)">🔊</button>
     ${l.note ? `<div class="letter-note-text">${l.note}</div>` : ''}
-</div>`).join('');
+</div>`;
+    }).join('');
 
     const diffRows = [
         ['Буква И',      'И и',      'І і',         'кніга (книга)'],
