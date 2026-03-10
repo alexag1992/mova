@@ -15,65 +15,65 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ---------- Loading screen ----------
 
-function showLoadingScreen() {
+async function showLoadingScreen() {
     const loading = document.getElementById('loading');
     const app     = document.getElementById('app');
     app.style.opacity = '0';
 
-    // Инициализируем Firestore
     if (window.Sync) Sync.init();
 
-    // Флаг: был ли уже обработан первый auth-event
-    let firstAuthHandled = false;
+    // Шаг 1: явно ждём результата редиректа от Google (если пользователь только что вошёл)
+    let user = null;
+    if (typeof firebase !== 'undefined') {
+        try {
+            const result = await firebase.auth().getRedirectResult();
+            if (result && result.user) user = result.user;
+        } catch (e) { /* ignore */ }
+    }
 
-    // Промис: ждём определения auth-состояния (или timeout 2s)
-    const authReady = new Promise(resolve => {
-        const timeout = setTimeout(() => { firstAuthHandled = true; resolve(); }, 2000);
+    // Шаг 2: если редиректа не было — берём текущее auth-состояние
+    if (!user && window.Auth) {
+        user = await new Promise(resolve => {
+            const unsub = firebase.auth().onAuthStateChanged(u => {
+                unsub();
+                resolve(u);
+            });
+            setTimeout(() => resolve(null), 2500);
+        });
+    }
 
-        if (!window.Auth) { resolve(); return; }
+    // Шаг 3: загружаем данные из Firestore (если залогинен)
+    if (user) {
+        const loaded = await Sync.load(user.uid).catch(() => false);
+        if (!loaded) await Sync.save(user.uid).catch(() => {});
+        Sync.saveProfile(user).catch(() => {});
+    }
 
-        Auth.onStateChanged(async user => {
-            if (!firstAuthHandled) {
-                // Первый вызов — при загрузке страницы
-                firstAuthHandled = true;
-                clearTimeout(timeout);
+    // Шаг 4: минимум 1 секунда загрузочного экрана
+    await new Promise(r => setTimeout(r, 1000));
 
-                if (user) {
-                    const loaded = await Sync.load(user.uid).catch(() => false);
-                    if (!loaded) {
-                        // Первый вход — заливаем локальные данные в облако
-                        await Sync.save(user.uid).catch(() => {});
-                    }
-                    Sync.saveProfile(user).catch(() => {});
-                }
-                resolve();
-            } else {
-                // Последующие изменения (вход / выход после загрузки)
-                // Перерисовываем немедленно — чтобы показать авторизованного пользователя
-                handleRoute();
-                // Синхронизацию грузим в фоне, потом перерисовываем ещё раз
-                if (user) {
-                    Sync.load(user.uid)
-                        .then(loaded => { if (loaded) handleRoute(); })
-                        .catch(() => {});
-                    Sync.saveProfile(user).catch(() => {});
-                }
+    loading.style.opacity = '0';
+    loading.style.transition = 'opacity 0.4s ease';
+
+    await new Promise(r => setTimeout(r, 400));
+    loading.style.display = 'none';
+    app.style.opacity = '1';
+    app.style.transition = 'opacity 0.3s ease';
+    initRouter();
+
+    // Шаг 5: слушаем последующие изменения (выход / смена аккаунта)
+    // skipFirst: пропускаем первый немедленный вызов — он дублирует initRouter
+    if (window.Auth) {
+        let skipFirst = true;
+        Auth.onStateChanged(async u => {
+            if (skipFirst) { skipFirst = false; return; }
+            handleRoute();
+            if (u) {
+                Sync.load(u.uid).then(ok => { if (ok) handleRoute(); }).catch(() => {});
+                Sync.saveProfile(u).catch(() => {});
             }
         });
-    });
-
-    // Минимум 1 секунда экрана загрузки + ждём auth
-    Promise.all([authReady, new Promise(r => setTimeout(r, 1000))]).then(() => {
-        loading.style.opacity = '0';
-        loading.style.transition = 'opacity 0.4s ease';
-
-        setTimeout(() => {
-            loading.style.display = 'none';
-            app.style.opacity = '1';
-            app.style.transition = 'opacity 0.3s ease';
-            initRouter();
-        }, 400);
-    });
+    }
 }
 
 // ---------- Роутер ----------
