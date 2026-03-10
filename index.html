@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="be">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="МОВА — бясплатны самавучак беларускай мовы. 24 урокі, 400+ слоў, інтэрактыўныя заданні, размоўнік і слоўнік.">
+    <meta name="keywords" content="беларуская мова, самавучак, вывучыць беларускую, белорусский язык, учить белорусский">
+    <meta name="author" content="МОВА">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="МОВА">
+
+    <!-- Apple PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="МОВА">
+    <link rel="apple-touch-icon" href="icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="МОВА — Самавучак беларускай мовы">
+    <meta property="og:description" content="Бясплатны самавучак беларускай мовы. 24 урокі, 400+ слоў, інтэрактыўныя заданні.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://alexag1992.github.io/mova/">
+    <meta property="og:image" content="https://alexag1992.github.io/mova/icons/icon-512.png">
+    <meta property="og:locale" content="be_BY">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="МОВА — Самавучак беларускай мовы">
+    <meta name="twitter:description" content="Бясплатны самавучак беларускай мовы. 24 урокі, 400+ слоў.">
+    <meta name="twitter:image" content="https://alexag1992.github.io/mova/icons/icon-512.png">
+
+    <title>МОВА — Самавучак беларускай мовы</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/mova/manifest.json">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/mova/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="/mova/favicon.ico">
+    <link rel="shortcut icon" href="/mova/favicon.ico">
+
+    <!-- Шрифт Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+
+    <!-- Стили -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Loading screen -->
+    <div id="loading" aria-hidden="true">
+        <div class="loading-logo">МОВА</div>
+        <div class="loading-sub">Самавучак беларускай мовы</div>
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Основное приложение -->
+    <main id="app" role="main"></main>
+
+    <!-- Нижняя навигация (мобильная) -->
+    <nav id="bottom-nav" aria-label="Навігацыя">
+        <button class="bottom-nav-item" data-hash="#/" onclick="navigate('#/')" aria-label="Галоўная">
+            <span class="bottom-nav-icon">🏠</span>
+            <span class="bottom-nav-label">Галоўная</span>
+        </button>
+        <button class="bottom-nav-item" data-hash="#/lessons" onclick="navigate('#/lessons')" aria-label="Урокі">
+            <span class="bottom-nav-icon">📚</span>
+            <span class="bottom-nav-label">Урокі</span>
+        </button>
+        <button class="bottom-nav-item" data-hash="#/dictionary" onclick="navigate('#/dictionary')" aria-label="Слоўнік">
+            <span class="bottom-nav-icon">📖</span>
+            <span class="bottom-nav-label">Слоўнік</span>
+        </button>
+        <button class="bottom-nav-item" data-hash="#/progress" onclick="navigate('#/progress')" aria-label="Прагрэс">
+            <span class="bottom-nav-icon">📊</span>
+            <span class="bottom-nav-label">Прагрэс</span>
+        </button>
+    </nav>
+
+    <!-- Контейнер для установки PWA -->
+    <div id="install-prompt-container"></div>
+
+    <!-- JS: порядок важен — progress → audio → exercises → dictionary → repetition → notifications → pages → app -->
+    <script src="js/progress.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/exercises.js"></script>
+    <script src="js/dictionary.js"></script>
+    <script src="js/repetition.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/pages.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- Регистрация Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/mova/sw.js')
+                .catch(err => console.warn('SW registration failed:', err));
+        }
+    </script>
+
+</body>
+</html>
