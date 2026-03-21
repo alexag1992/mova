@@ -235,7 +235,7 @@ function renderBuildSentence(container, data, onComplete) {
 
         // Проверить
         container.querySelector('#bs-check').addEventListener('click', () => {
-            const answer = built.join(' ');
+            const answer = built.join(' ').replace(/ ([?!.,;:])/g, '$1');
             const fb = container.querySelector('#ex-fb');
             if (answer === data.correct) {
                 addPoints(15);

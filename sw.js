@@ -2,7 +2,7 @@
 // sw.js — Service Worker. Стратегия: Cache First → Network
 // ============================================================
 
-const CACHE_NAME = 'mova-v11';
+const CACHE_NAME = 'mova-v12';
 const AUDIO_CACHE = 'mova-audio-v1';
 
 // Файлы для кэширования при установке (статика)
