@@ -579,6 +579,7 @@ function loadLessonContent(id) {
 // ---------- UI урока ----------
 
 function buildLessonUI(lessonId, data, contentEl) {
+    lessonId = parseInt(lessonId);
     const sections = data.sections || [];
     let currentSection = 0;
     let totalPoints = 0;
